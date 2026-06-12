@@ -102,8 +102,6 @@
 
 .pokemon-pet-menu {
 	position: fixed;
-	display: flex;
-	flex-direction: column;
 	width: 292px;
 	max-height: min(520px, calc(100vh - 32px));
 	padding: 10px;
@@ -162,13 +160,11 @@
 .pokemon-pet-field {
 	display: grid;
 	gap: 7px;
-	min-height: 0;
 	margin-top: 12px;
 }
 
 .pokemon-pet-collection-field {
-	flex: 1 1 auto;
-	overflow: hidden;
+	min-height: 132px;
 }
 
 .pokemon-pet-field label {
@@ -266,7 +262,7 @@
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 7px;
-	min-height: 0;
+	max-height: min(228px, 35vh);
 	overflow: auto;
 	padding-right: 2px;
 }

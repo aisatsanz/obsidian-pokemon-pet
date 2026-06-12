@@ -604,7 +604,6 @@ export class PokemonPetController {
 
 		this.createSizeControl(this.menuEl);
 		this.createPomodoroControl(this.menuEl);
-		this.createCollection(this.menuEl);
 
 		const actions = this.menuEl.createDiv({ cls: 'pokemon-pet-menu-actions' });
 		const wikiLink = actions.createEl('a', {
@@ -628,6 +627,8 @@ export class PokemonPetController {
 				new Notice('Pokemon hidden. Re-enable it in pokemon pet settings.');
 			})();
 		});
+
+		this.createCollection(this.menuEl);
 	}
 
 	private createSizeControl(container: HTMLElement): void {

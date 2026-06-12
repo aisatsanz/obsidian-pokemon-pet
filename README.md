@@ -11,6 +11,7 @@ The first unlocked Pokemon is Pikachu. Your active Pokemon wanders along the bot
 - Calm pet-app style movement along visible Obsidian editor/preview surfaces.
 - Rare wild encounters weighted by rarity.
 - Catch animation with a Pokeball.
+- Repeat encounters can evolve Pokemon already in your collection.
 - Pet menu for size, collection selection, wiki link, and hiding the pet.
 - Pomodoro timer presets with Pokemon completion notifications.
 - Canvas-rendered frame animations for idle, walking, travel, and typing reactions.

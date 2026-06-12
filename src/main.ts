@@ -1,5 +1,5 @@
 import { Notice, Plugin } from 'obsidian';
-import { FALLBACK_POKEMON, PokemonEntry, getFallbackPokemon } from './pokemon';
+import { FALLBACK_POKEMON, PokemonEntry, getFallbackPokemon, getNextEvolutionId } from './pokemon';
 import { PokemonPetController } from './pet-controller';
 import {
 	DEFAULT_SETTINGS,
@@ -128,6 +128,27 @@ export default class PokemonPetPlugin extends Plugin {
 		this.settings.activePokemonId = id;
 		await this.saveSettings();
 		await this.refreshPet();
+	}
+
+	async evolveCollectionPokemon(id: number): Promise<PokemonEntry | null> {
+		const nextId = getNextEvolutionId(id);
+		if (!nextId || !this.settings.collection.includes(id)) {
+			return null;
+		}
+
+		this.settings.collection = this.settings.collection
+			.filter((pokemonId) => pokemonId !== id && pokemonId !== nextId)
+			.concat(nextId)
+			.sort((a, b) => a - b);
+
+		if (this.settings.activePokemonId === id) {
+			this.settings.activePokemonId = nextId;
+		}
+
+		const evolved = await this.getPokemon(nextId);
+		await this.saveSettings();
+		await this.refreshPet();
+		return evolved;
 	}
 
 	async resetCollection(): Promise<void> {

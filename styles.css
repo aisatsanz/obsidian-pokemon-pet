@@ -381,6 +381,12 @@
 	border-color: #d19a1d;
 }
 
+.pokemon-pet-wild-evolution .pokemon-pet-wild-label {
+	border-color: var(--text-accent);
+	color: var(--text-accent);
+	font-weight: 700;
+}
+
 .pokemon-pet-wild.is-catching {
 	animation: pokemon-pet-caught 720ms steps(4, end) forwards;
 }

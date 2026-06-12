@@ -5,7 +5,9 @@ import {
 	PokemonEntry,
 	RARITY_LABELS,
 	RARITY_WEIGHTS,
+	WILD_POKEMON_IDS,
 	getPokemonName,
+	getNextEvolutionId,
 	makeStaticSpriteUrl,
 } from './pokemon';
 import {
@@ -369,7 +371,10 @@ export class PokemonPetController {
 		}
 
 		const available = FALLBACK_POKEMON.filter(
-			(pokemon) => !this.plugin.settings.collection.includes(pokemon.id),
+			(pokemon) =>
+				(WILD_POKEMON_IDS.has(pokemon.id) &&
+					!this.plugin.settings.collection.includes(pokemon.id)) ||
+				this.canEvolveFromEncounter(pokemon.id),
 		);
 		if (available.length === 0) {
 			return;
@@ -377,11 +382,17 @@ export class PokemonPetController {
 
 		const surface = this.resolveSurface(this.currentSurface) ?? this.getFallbackSurface();
 		const pokemon = await this.plugin.getPokemon(weightedPick(available).id);
+		const isEvolutionEncounter = this.canEvolveFromEncounter(pokemon.id);
+		const nextEvolutionName = isEvolutionEncounter
+			? getPokemonName(getNextEvolutionId(pokemon.id)!)
+			: null;
 		this.wildEl = this.rootEl.createEl('button', {
-			cls: `pokemon-pet-wild pokemon-pet-rarity-${pokemon.rarity}`,
+			cls: `pokemon-pet-wild pokemon-pet-rarity-${pokemon.rarity}${isEvolutionEncounter ? ' pokemon-pet-wild-evolution' : ''}`,
 			attr: {
 				type: 'button',
-				'aria-label': `Catch ${pokemon.name}`,
+				'aria-label': isEvolutionEncounter
+					? `Evolve ${pokemon.name}`
+					: `Catch ${pokemon.name}`,
 			},
 		});
 		if (surface) {
@@ -399,7 +410,9 @@ export class PokemonPetController {
 		});
 		this.wildEl.createDiv({
 			cls: 'pokemon-pet-wild-label',
-			text: `${pokemon.name} Lv.${pokemon.level}`,
+			text: isEvolutionEncounter && nextEvolutionName
+				? `${pokemon.name} -> ${nextEvolutionName}`
+				: `${pokemon.name} Lv.${pokemon.level}`,
 		});
 		this.wildEl.addEventListener('click', () => {
 			void this.catchPokemon(pokemon);
@@ -429,13 +442,28 @@ export class PokemonPetController {
 		this.wildEl.addClass('is-catching');
 
 		window.setTimeout(() => {
-			this.wildEl?.remove();
-			this.wildEl = null;
-			ball.remove();
-			void this.plugin.addToCollection(pokemon.id);
-			new Notice(`${pokemon.name} joined your collection.`);
-			this.renderMenu();
+			void (async () => {
+				this.wildEl?.remove();
+				this.wildEl = null;
+				ball.remove();
+
+				const evolved = await this.plugin.evolveCollectionPokemon(pokemon.id);
+				if (evolved) {
+					new Notice(`${pokemon.name} evolved into ${evolved.name}.`);
+					this.playPetReaction('UP', 1_400);
+				} else {
+					await this.plugin.addToCollection(pokemon.id);
+					new Notice(`${pokemon.name} joined your collection.`);
+				}
+
+				this.renderMenu();
+			})();
 		}, 720);
+	}
+
+	private canEvolveFromEncounter(id: number): boolean {
+		const nextId = getNextEvolutionId(id);
+		return Boolean(nextId && this.plugin.settings.collection.includes(id));
 	}
 
 	private updatePomodoro(now: number): void {

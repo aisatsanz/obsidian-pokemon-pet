@@ -6,7 +6,7 @@ The first unlocked Pokemon is Pikachu. Your active Pokemon wanders along the bot
 
 ## Features
 
-- Pixel Pokemon pet inside Obsidian.
+- 70+ pixel Pokemon pet forms inside Obsidian.
 - Pikachu unlocked by default.
 - Calm pet-app style movement along visible Obsidian editor/preview surfaces.
 - Rare wild encounters weighted by rarity.

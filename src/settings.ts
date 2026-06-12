@@ -14,7 +14,7 @@ export interface PokemonPetSettings {
 }
 
 export const DEFAULT_SETTINGS: PokemonPetSettings = {
-	settingsVersion: 2,
+	settingsVersion: 3,
 	activePokemonId: 25,
 	collection: [25],
 	hidden: false,

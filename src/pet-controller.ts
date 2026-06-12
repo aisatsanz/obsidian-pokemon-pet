@@ -10,14 +10,22 @@ import {
 } from './pokemon';
 
 type Direction = -1 | 1;
-type PetState = 'walk' | 'idle' | 'travel-to-perch' | 'perch' | 'travel-to-ground';
+type PetState = 'walk' | 'idle' | 'travel';
 
-const GROUND_OFFSET = 20;
-const WALK_SPEED = 0.018;
+interface WalkSurface {
+	element: HTMLElement | null;
+	left: number;
+	right: number;
+	top: number;
+}
+
+const WALK_SPEED = 0.014;
 const ENCOUNTER_INTERVAL = 75_000;
 const FIRST_ENCOUNTER_DELAY = 90_000;
-const MIN_PERCH_DELAY = 120_000;
-const MAX_PERCH_DELAY = 240_000;
+const MIN_SURFACE_SWITCH_DELAY = 55_000;
+const MAX_SURFACE_SWITCH_DELAY = 110_000;
+const SURFACE_FOOT_OFFSET = 4;
+const FALLBACK_BOTTOM_OFFSET = 24;
 
 export class PokemonPetController {
 	private plugin: PokemonPetPlugin;
@@ -27,21 +35,22 @@ export class PokemonPetController {
 	private menuEl: HTMLDivElement | null = null;
 	private wildEl: HTMLButtonElement | null = null;
 	private activePokemon: PokemonEntry | null = null;
-	private focusedElement: HTMLElement | null = null;
+	private currentSurface: WalkSurface | null = null;
+	private targetSurface: WalkSurface | null = null;
 	private state: PetState = 'walk';
 	private x = 80;
-	private y = GROUND_OFFSET;
+	private y = FALLBACK_BOTTOM_OFFSET;
 	private direction: Direction = 1;
 	private lastFrameAt = 0;
 	private stateUntil = 0;
 	private lastEncounterAt = 0;
-	private nextPerchAt = 0;
+	private nextSurfaceAt = 0;
 	private travelStartAt = 0;
 	private travelDuration = 0;
 	private startX = 0;
-	private startY = GROUND_OFFSET;
+	private startY = FALLBACK_BOTTOM_OFFSET;
 	private targetX = 80;
-	private targetY = GROUND_OFFSET;
+	private targetY = FALLBACK_BOTTOM_OFFSET;
 	private removeTypingListener: (() => void) | null = null;
 
 	constructor(plugin: PokemonPetPlugin) {
@@ -54,8 +63,8 @@ export class PokemonPetController {
 		const now = window.performance.now();
 		this.lastFrameAt = now;
 		this.lastEncounterAt = now - ENCOUNTER_INTERVAL + FIRST_ENCOUNTER_DELAY;
-		this.nextPerchAt = now + randomBetween(MIN_PERCH_DELAY, MAX_PERCH_DELAY);
-		this.stateUntil = now + randomBetween(8_000, 18_000);
+		this.nextSurfaceAt = now + randomBetween(MIN_SURFACE_SWITCH_DELAY, MAX_SURFACE_SWITCH_DELAY);
+		this.stateUntil = now + randomBetween(10_000, 24_000);
 
 		const doc = activeDocument;
 		this.rootEl = doc.body.createDiv({ cls: 'pokemon-pet-root' });
@@ -66,6 +75,9 @@ export class PokemonPetController {
 		this.spriteEl = this.petEl.createEl('img', { cls: 'pokemon-pet-sprite' });
 		this.petEl.createDiv({ cls: 'pokemon-pet-emote', text: '!' });
 		this.petEl.createDiv({ cls: 'pokemon-pet-shadow' });
+
+		this.currentSurface = this.pickSurface();
+		this.snapToSurface(this.currentSurface);
 
 		this.petEl.addEventListener('click', (event) => {
 			event.stopPropagation();
@@ -89,7 +101,8 @@ export class PokemonPetController {
 		this.spriteEl = null;
 		this.menuEl = null;
 		this.wildEl = null;
-		this.focusedElement = null;
+		this.currentSurface = null;
+		this.targetSurface = null;
 		this.removeTypingListener = null;
 	}
 
@@ -139,58 +152,73 @@ export class PokemonPetController {
 		const dt = Math.min(80, Math.max(0, now - this.lastFrameAt));
 		this.lastFrameAt = now;
 
-		if (this.state === 'walk') {
-			this.walk(dt, now);
-		} else if (this.state === 'idle') {
-			this.y = GROUND_OFFSET;
-			if (now >= this.stateUntil) {
-				this.beginWalk(now);
-			}
-		} else if (this.state === 'travel-to-perch' || this.state === 'travel-to-ground') {
+		if (this.state === 'travel') {
 			this.updateTravel(now);
-		} else if (this.state === 'perch') {
-			this.updatePerch(now);
+			this.positionPet();
+			return;
 		}
 
-		if ((this.state === 'walk' || this.state === 'idle') && now >= this.nextPerchAt) {
-			this.beginTravelToContent(now);
+		this.currentSurface = this.resolveSurface(this.currentSurface);
+		if (!this.currentSurface) {
+			this.beginTravelToSurface(this.pickSurface(), now);
+			this.positionPet();
+			return;
+		}
+
+		this.y = this.getSurfaceY(this.currentSurface);
+		this.x = clamp(
+			this.x,
+			this.currentSurface.left,
+			Math.max(this.currentSurface.left, this.currentSurface.right - this.plugin.settings.size),
+		);
+
+		if (this.state === 'walk') {
+			this.walkOnSurface(dt, now);
+		} else if (now >= this.stateUntil) {
+			this.beginWalk(now);
+		}
+
+		if (now >= this.nextSurfaceAt) {
+			this.beginTravelToSurface(this.pickSurface(this.currentSurface), now);
 		}
 
 		this.positionPet();
 	}
 
-	private walk(dt: number, now: number): void {
-		const size = this.plugin.settings.size;
-		const width = activeWindow.innerWidth;
-		this.y = GROUND_OFFSET;
-		this.x += this.direction * WALK_SPEED * dt;
-
-		if (this.x < 12) {
-			this.direction = 1;
-			this.x = 12;
-			this.beginIdle(now, randomBetween(1_800, 4_200));
+	private walkOnSurface(dt: number, now: number): void {
+		if (!this.currentSurface) {
 			return;
 		}
 
-		if (this.x > width - size - 12) {
+		const maxX = Math.max(this.currentSurface.left, this.currentSurface.right - this.plugin.settings.size);
+		this.x += this.direction * WALK_SPEED * dt;
+
+		if (this.x <= this.currentSurface.left) {
+			this.x = this.currentSurface.left;
+			this.direction = 1;
+			this.beginIdle(now, randomBetween(2_500, 6_000));
+			return;
+		}
+
+		if (this.x >= maxX) {
+			this.x = maxX;
 			this.direction = -1;
-			this.x = width - size - 12;
-			this.beginIdle(now, randomBetween(1_800, 4_200));
+			this.beginIdle(now, randomBetween(2_500, 6_000));
 			return;
 		}
 
 		if (now >= this.stateUntil) {
-			if (Math.random() < 0.55) {
-				this.beginIdle(now, randomBetween(3_500, 8_500));
+			if (Math.random() < 0.45) {
+				this.beginIdle(now, randomBetween(4_000, 9_000));
 			} else {
-				this.stateUntil = now + randomBetween(8_000, 18_000);
+				this.stateUntil = now + randomBetween(12_000, 26_000);
 			}
 		}
 	}
 
 	private beginWalk(now: number): void {
 		this.state = 'walk';
-		this.stateUntil = now + randomBetween(8_000, 18_000);
+		this.stateUntil = now + randomBetween(12_000, 26_000);
 		this.setStateClass();
 	}
 
@@ -200,77 +228,67 @@ export class PokemonPetController {
 		this.setStateClass();
 	}
 
-	private beginTravelToContent(now: number): void {
-		const target = this.getRandomPerchElement();
-		this.nextPerchAt = now + randomBetween(MIN_PERCH_DELAY, MAX_PERCH_DELAY);
+	private beginTravelToSurface(surface: WalkSurface | null, now: number): void {
+		const target = this.resolveSurface(surface) ?? this.getFallbackSurface();
+		this.nextSurfaceAt = now + randomBetween(MIN_SURFACE_SWITCH_DELAY, MAX_SURFACE_SWITCH_DELAY);
 
 		if (!target) {
 			return;
 		}
 
-		const rect = target.getBoundingClientRect();
-		this.focusedElement = target;
-		this.state = 'travel-to-perch';
+		this.targetSurface = target;
+		this.state = 'travel';
 		this.travelStartAt = now;
-		this.travelDuration = randomBetween(1_800, 2_600);
+		this.travelDuration = randomBetween(1_300, 2_100);
 		this.startX = this.x;
 		this.startY = this.y;
-		this.targetX = clamp(rect.left + rect.width / 2 - this.plugin.settings.size / 2, 12, activeWindow.innerWidth - this.plugin.settings.size - 12);
-		this.targetY = activeWindow.innerHeight - rect.top + 6;
-		this.direction = this.targetX >= this.x ? 1 : -1;
-		this.setStateClass();
-	}
-
-	private beginTravelToGround(now: number): void {
-		this.focusedElement = null;
-		this.state = 'travel-to-ground';
-		this.travelStartAt = now;
-		this.travelDuration = randomBetween(1_200, 1_800);
-		this.startX = this.x;
-		this.startY = this.y;
-		this.targetX = clamp(this.x + this.direction * randomBetween(60, 140), 12, activeWindow.innerWidth - this.plugin.settings.size - 12);
-		this.targetY = GROUND_OFFSET;
+		this.targetX = randomBetween(
+			target.left,
+			Math.max(target.left, target.right - this.plugin.settings.size),
+		);
+		this.targetY = this.getSurfaceY(target);
 		this.direction = this.targetX >= this.x ? 1 : -1;
 		this.setStateClass();
 	}
 
 	private updateTravel(now: number): void {
+		const surface = this.resolveSurface(this.targetSurface);
+		if (surface) {
+			this.targetSurface = surface;
+			this.targetY = this.getSurfaceY(surface);
+			this.targetX = clamp(
+				this.targetX,
+				surface.left,
+				Math.max(surface.left, surface.right - this.plugin.settings.size),
+			);
+		}
+
 		const amount = smoothStep(clamp((now - this.travelStartAt) / this.travelDuration, 0, 1));
-		const lift = Math.sin(amount * Math.PI) * 42;
+		const lift = Math.sin(amount * Math.PI) * 34;
 		this.x = lerp(this.startX, this.targetX, amount);
 		this.y = lerp(this.startY, this.targetY, amount) + lift;
 
 		if (amount >= 1) {
-			this.x = this.targetX;
-			this.y = this.targetY;
-			if (this.state === 'travel-to-perch') {
-				this.state = 'perch';
-				this.stateUntil = now + randomBetween(12_000, 22_000);
-			} else {
-				this.beginWalk(now);
-			}
-			this.setStateClass();
+			this.currentSurface = this.targetSurface ?? this.getFallbackSurface();
+			this.targetSurface = null;
+			this.snapToSurface(this.currentSurface);
+			this.beginWalk(now);
 		}
 	}
 
-	private updatePerch(now: number): void {
-		if (!this.focusedElement?.isConnected) {
-			this.beginTravelToGround(now);
+	private snapToSurface(surface: WalkSurface | null): void {
+		const resolved = this.resolveSurface(surface) ?? this.getFallbackSurface();
+		if (!resolved) {
 			return;
 		}
 
-		const rect = this.focusedElement.getBoundingClientRect();
-		if (rect.bottom < 0 || rect.top > activeWindow.innerHeight) {
-			this.beginTravelToGround(now);
-			return;
-		}
-
-		this.x = clamp(rect.left + rect.width / 2 - this.plugin.settings.size / 2, 12, activeWindow.innerWidth - this.plugin.settings.size - 12);
-		this.y = activeWindow.innerHeight - rect.top + 6;
-
-		if (now >= this.stateUntil) {
-			this.beginTravelToGround(now);
-		}
+		this.currentSurface = resolved;
+		this.x = clamp(
+			this.x,
+			resolved.left,
+			Math.max(resolved.left, resolved.right - this.plugin.settings.size),
+		);
+		this.y = this.getSurfaceY(resolved);
 	}
 
 	private positionPet(): void {
@@ -294,6 +312,7 @@ export class PokemonPetController {
 			return;
 		}
 
+		const surface = this.resolveSurface(this.currentSurface) ?? this.getFallbackSurface();
 		const pokemon = await this.plugin.getPokemon(weightedPick(available).id);
 		this.wildEl = this.rootEl.createEl('button', {
 			cls: `pokemon-pet-wild pokemon-pet-rarity-${pokemon.rarity}`,
@@ -302,8 +321,13 @@ export class PokemonPetController {
 				'aria-label': `Catch ${pokemon.name}`,
 			},
 		});
-		this.wildEl.style.left = `${Math.max(24, Math.random() * (activeWindow.innerWidth - 144))}px`;
-		this.wildEl.style.bottom = `${72 + Math.random() * 70}px`;
+		if (surface) {
+			this.wildEl.style.left = `${randomBetween(surface.left, Math.max(surface.left, surface.right - 76))}px`;
+			this.wildEl.style.bottom = `${this.getSurfaceY(surface) + 4}px`;
+		} else {
+			this.wildEl.style.left = `${Math.max(24, Math.random() * (activeWindow.innerWidth - 144))}px`;
+			this.wildEl.style.bottom = `${FALLBACK_BOTTOM_OFFSET}px`;
+		}
 		this.wildEl.createEl('img', {
 			attr: {
 				src: pokemon.spriteUrl,
@@ -434,6 +458,7 @@ export class PokemonPetController {
 				this.plugin.settings.size = Number(input.value);
 				await this.plugin.saveSettings();
 				await this.refresh();
+				this.snapToSurface(this.currentSurface);
 			})();
 		});
 	}
@@ -497,25 +522,102 @@ export class PokemonPetController {
 		};
 	}
 
-	private getRandomPerchElement(): HTMLElement | null {
-		const candidates = Array.from(
-			activeDocument.querySelectorAll<HTMLElement>(
-				'.markdown-preview-view img, .markdown-preview-view p, .cm-content .cm-line',
-			),
-		).filter((element) => {
-			const rect = element.getBoundingClientRect();
-			const style = activeWindow.getComputedStyle(element);
-			return (
-				rect.width > 120 &&
-				rect.height > 14 &&
-				rect.top > 110 &&
-				rect.bottom < activeWindow.innerHeight - 140 &&
-				style.display !== 'none' &&
-				style.visibility !== 'hidden'
-			);
-		});
+	private pickSurface(exclude?: WalkSurface | null): WalkSurface | null {
+		const candidates = this.getSurfaceCandidates();
+		if (candidates.length === 0) {
+			return this.getFallbackSurface();
+		}
 
-		return candidates[Math.floor(Math.random() * candidates.length)] ?? null;
+		const activeLine = candidates.find((surface) =>
+			surface.element?.matches('.cm-activeLine, .cm-line.cm-active'),
+		);
+		if (activeLine && Math.random() < 0.7) {
+			return activeLine;
+		}
+
+		const filtered = candidates.filter((surface) => surface.element !== exclude?.element);
+		const pool = filtered.length > 0 ? filtered : candidates;
+		return pool[Math.floor(Math.random() * pool.length)] ?? this.getFallbackSurface();
+	}
+
+	private getSurfaceCandidates(): WalkSurface[] {
+		const selector = [
+			'.workspace-leaf.mod-active .cm-activeLine',
+			'.workspace-leaf.mod-active .cm-line',
+			'.workspace-leaf.mod-active .markdown-preview-view p',
+			'.workspace-leaf.mod-active .markdown-preview-view li',
+			'.workspace-leaf.mod-active .markdown-preview-view img',
+			'.workspace-leaf.mod-active .markdown-preview-view pre',
+			'.workspace-leaf.mod-active .markdown-preview-view table',
+			'.workspace-leaf.mod-active .markdown-preview-view .callout',
+		].join(', ');
+		const elements = Array.from(activeDocument.querySelectorAll<HTMLElement>(selector));
+		const surfaces = elements
+			.map((element) => this.surfaceFromElement(element))
+			.filter((surface): surface is WalkSurface => Boolean(surface));
+
+		return surfaces.length > 0 ? surfaces : [this.getFallbackSurface()].filter(Boolean) as WalkSurface[];
+	}
+
+	private surfaceFromElement(element: HTMLElement): WalkSurface | null {
+		const rect = element.getBoundingClientRect();
+		const style = activeWindow.getComputedStyle(element);
+		const minWidth = Math.max(180, this.plugin.settings.size * 2.4);
+
+		if (
+			rect.width < minWidth ||
+			rect.top < 84 ||
+			rect.top > activeWindow.innerHeight - this.plugin.settings.size - 36 ||
+			rect.right < 12 ||
+			rect.left > activeWindow.innerWidth - 12 ||
+			style.display === 'none' ||
+			style.visibility === 'hidden' ||
+			Number(style.opacity) < 0.2
+		) {
+			return null;
+		}
+
+		return {
+			element,
+			left: clamp(rect.left + 4, 12, activeWindow.innerWidth - 24),
+			right: clamp(rect.right - 4, 24, activeWindow.innerWidth - 12),
+			top: rect.top,
+		};
+	}
+
+	private resolveSurface(surface: WalkSurface | null): WalkSurface | null {
+		if (!surface) {
+			return null;
+		}
+		if (!surface.element) {
+			return this.getFallbackSurface();
+		}
+		return this.surfaceFromElement(surface.element);
+	}
+
+	private getFallbackSurface(): WalkSurface | null {
+		const activeLeaf = activeDocument.querySelector<HTMLElement>('.workspace-leaf.mod-active .view-content');
+		const rect = activeLeaf?.getBoundingClientRect();
+
+		if (!rect) {
+			return {
+				element: null,
+				left: 12,
+				right: activeWindow.innerWidth - 12,
+				top: activeWindow.innerHeight - FALLBACK_BOTTOM_OFFSET,
+			};
+		}
+
+		return {
+			element: activeLeaf,
+			left: clamp(rect.left + 18, 12, activeWindow.innerWidth - 24),
+			right: clamp(rect.right - 18, 24, activeWindow.innerWidth - 12),
+			top: clamp(rect.bottom - 10, 96, activeWindow.innerHeight - FALLBACK_BOTTOM_OFFSET),
+		};
+	}
+
+	private getSurfaceY(surface: WalkSurface): number {
+		return activeWindow.innerHeight - surface.top + SURFACE_FOOT_OFFSET;
 	}
 
 	private isMenuOpen(): boolean {
@@ -527,13 +629,11 @@ export class PokemonPetController {
 			return;
 		}
 
-		this.petEl.removeClass('pokemon-pet-walk', 'pokemon-pet-idle', 'pokemon-pet-travel', 'pokemon-pet-perch');
+		this.petEl.removeClass('pokemon-pet-walk', 'pokemon-pet-idle', 'pokemon-pet-travel');
 		if (this.state === 'walk') {
 			this.petEl.addClass('pokemon-pet-walk');
 		} else if (this.state === 'idle') {
 			this.petEl.addClass('pokemon-pet-idle');
-		} else if (this.state === 'perch') {
-			this.petEl.addClass('pokemon-pet-perch');
 		} else {
 			this.petEl.addClass('pokemon-pet-travel');
 		}

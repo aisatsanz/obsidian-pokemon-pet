@@ -140,5 +140,8 @@ function clampNumber(value: number, min: number, max: number): number {
 }
 
 function isPixelSprite(pokemon: PokemonEntry): boolean {
-	return Boolean(pokemon.stillSpriteUrl) && !pokemon.spriteUrl.includes('/official-artwork/');
+	return (
+		Boolean(pokemon.stillSpriteUrl) &&
+		pokemon.spriteUrl.includes('play.pokemonshowdown.com/sprites/')
+	);
 }

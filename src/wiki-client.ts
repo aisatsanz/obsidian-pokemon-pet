@@ -4,8 +4,8 @@ import {
 	PokemonEntry,
 	PokemonRarity,
 	getFallbackPokemon,
-	makeStaticSpriteUrl,
 	makeSpriteUrl,
+	makeStaticSpriteUrl,
 	makeWikiUrl,
 } from './pokemon';
 
@@ -13,19 +13,6 @@ interface PokeApiPokemon {
 	base_experience?: number;
 	id: number;
 	name: string;
-	sprites?: {
-		versions?: {
-			'generation-v'?: {
-				'black-white'?: {
-					animated?: {
-						front_default?: string;
-					};
-					front_default?: string;
-				};
-			};
-		};
-		front_default?: string;
-	};
 	types?: Array<{ type: { name: string } }>;
 }
 
@@ -51,7 +38,6 @@ export class PokemonWikiClient {
 			]);
 			const name = this.getEnglishName(species) ?? titleCase(pokemon.name);
 			const captureRate = species.capture_rate ?? fallback.captureRate ?? 255;
-			const blackWhiteSprites = pokemon.sprites?.versions?.['generation-v']?.['black-white'];
 
 			return {
 				id: pokemon.id,
@@ -60,15 +46,8 @@ export class PokemonWikiClient {
 				rarity: deriveRarity(species, captureRate),
 				types: pokemon.types?.map((entry) => entry.type.name) ?? fallback.types,
 				captureRate,
-				spriteUrl:
-					blackWhiteSprites?.animated?.front_default ??
-					blackWhiteSprites?.front_default ??
-					pokemon.sprites?.front_default ??
-					makeSpriteUrl(id),
-				stillSpriteUrl:
-					blackWhiteSprites?.front_default ??
-					pokemon.sprites?.front_default ??
-					makeStaticSpriteUrl(id),
+				spriteUrl: makeSpriteUrl(pokemon.name),
+				stillSpriteUrl: makeStaticSpriteUrl(pokemon.name),
 				wikiUrl: makeWikiUrl(name),
 			};
 		} catch {

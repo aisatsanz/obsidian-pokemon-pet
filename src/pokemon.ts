@@ -54,12 +54,33 @@ export function getPokemonName(id: number): string {
 	return getFallbackPokemon(id)?.name ?? `Pokemon #${id}`;
 }
 
-export function makeSpriteUrl(id: number): string {
-	return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${id}.gif`;
+export function makePokemonSpriteSlug(name: string): string {
+	return name
+		.toLowerCase()
+		.replaceAll('♀', '-f')
+		.replaceAll('♂', '-m')
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
 }
 
-export function makeStaticSpriteUrl(id: number): string {
-	return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+export function makeSpriteUrl(pokemon: number | string): string {
+	const slug = typeof pokemon === 'number'
+		? getFallbackPokemon(pokemon)?.name
+		: pokemon;
+	if (!slug && typeof pokemon === 'number') {
+		return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon}.png`;
+	}
+	return `https://play.pokemonshowdown.com/sprites/ani/${makePokemonSpriteSlug(slug ?? 'pikachu')}.gif`;
+}
+
+export function makeStaticSpriteUrl(pokemon: number | string): string {
+	const slug = typeof pokemon === 'number'
+		? getFallbackPokemon(pokemon)?.name
+		: pokemon;
+	if (!slug && typeof pokemon === 'number') {
+		return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon}.png`;
+	}
+	return `https://play.pokemonshowdown.com/sprites/gen5/${makePokemonSpriteSlug(slug ?? 'pikachu')}.png`;
 }
 
 export function makeWikiUrl(name: string): string {
@@ -81,8 +102,8 @@ function makePokemon(
 		rarity,
 		types,
 		captureRate,
-		spriteUrl: makeSpriteUrl(id),
-		stillSpriteUrl: makeStaticSpriteUrl(id),
+		spriteUrl: makeSpriteUrl(name),
+		stillSpriteUrl: makeStaticSpriteUrl(name),
 		wikiUrl: makeWikiUrl(name),
 	};
 }

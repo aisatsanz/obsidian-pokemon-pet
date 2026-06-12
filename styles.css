@@ -11,18 +11,36 @@
 
 .pokemon-pet {
 	--pokemon-pet-size: 64px;
+	-webkit-appearance: none;
+	appearance: none;
 	position: fixed;
 	left: 0;
 	bottom: 0;
 	width: var(--pokemon-pet-size);
 	height: var(--pokemon-pet-size);
-	border: 0;
-	padding: 0;
-	background: transparent;
+	border: 0 !important;
+	padding: 0 !important;
+	background: transparent !important;
+	background-color: transparent !important;
+	box-shadow: none !important;
 	cursor: pointer;
+	outline: none;
 	pointer-events: auto;
 	transform-origin: center bottom;
 	transition: filter 120ms steps(2, end);
+}
+
+.pokemon-pet::before,
+.pokemon-pet::after {
+	display: none !important;
+	content: none !important;
+}
+
+.pokemon-pet:focus,
+.pokemon-pet:active {
+	background: transparent !important;
+	background-color: transparent !important;
+	box-shadow: none !important;
 }
 
 .pokemon-pet:hover,
@@ -36,6 +54,7 @@
 	display: block;
 	width: 100%;
 	height: 100%;
+	background: transparent !important;
 	object-fit: contain;
 	image-rendering: pixelated;
 	image-rendering: crisp-edges;
@@ -218,20 +237,32 @@
 }
 
 .pokemon-pet-wild {
+	-webkit-appearance: none;
+	appearance: none;
 	position: fixed;
 	width: 76px;
 	height: 94px;
-	border: 0;
-	padding: 0;
-	background: transparent;
+	border: 0 !important;
+	padding: 0 !important;
+	background: transparent !important;
+	background-color: transparent !important;
+	box-shadow: none !important;
 	cursor: crosshair;
+	outline: none;
 	pointer-events: auto;
 	animation: pokemon-pet-wild 1800ms steps(2, end) infinite;
+}
+
+.pokemon-pet-wild::before,
+.pokemon-pet-wild::after {
+	display: none !important;
+	content: none !important;
 }
 
 .pokemon-pet-wild img {
 	width: 64px;
 	height: 64px;
+	background: transparent !important;
 	object-fit: contain;
 	image-rendering: pixelated;
 	image-rendering: crisp-edges;

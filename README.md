@@ -18,7 +18,9 @@ The first unlocked Pokemon is Pikachu. Your active Pokemon wanders along the bot
 
 ## Data sources
 
-The plugin keeps a small bundled fallback roster so it works offline. When remote data is enabled, it fetches structured Pokemon data from the public PokeAPI, uses transparent pixel sprites from Pokemon Showdown, and links each Pokemon to its Pokemon Wiki page. No vault content is sent to external services.
+The plugin keeps a small bundled fallback roster so it works offline. When remote data is enabled, it fetches structured Pokemon data from the public PokeAPI, uses transparent pixel sprites from Pokemon Showdown, and links each Pokemon to its Pokemon Wiki page. These requests use Pokemon IDs and sprite URLs only; no vault content, note names, or personal data are sent to external services.
+
+Pokemon Pet is an unofficial fan-made plugin. It is not affiliated with, endorsed by, sponsored by, or approved by Nintendo, Game Freak, Creatures Inc., The Pokemon Company, PokeAPI, Pokemon Showdown, or Pokemon Wiki.
 
 ## Install from source
 

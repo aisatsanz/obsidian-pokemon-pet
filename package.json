@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-pokemon-pet",
-	"version": "1.0.0",
-	"description": "A Pokemon pet companion for Obsidian.",
+	"version": "1.0.1",
+	"description": "A collectible Pokemon pet companion for markdown workspaces.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

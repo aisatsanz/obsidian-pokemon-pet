@@ -12,7 +12,7 @@ The first unlocked Pokemon is Pikachu. Your active Pokemon wanders along the bot
 - Rare wild encounters weighted by rarity.
 - Catch animation with a Pokeball.
 - Pet menu for size, collection selection, wiki link, and hiding the pet.
-- Pixel-style typing reaction.
+- Canvas-rendered frame animations for idle, walking, travel, and typing reactions.
 - Optional remote Pokemon data lookup with local fallback data.
 
 ## Data sources

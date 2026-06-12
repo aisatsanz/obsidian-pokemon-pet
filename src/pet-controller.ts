@@ -8,6 +8,7 @@ import {
 	getPokemonName,
 	makeStaticSpriteUrl,
 } from './pokemon';
+import { PokemonSpriteAnimator, SpriteAnimationState } from './sprite-animator';
 
 type Direction = -1 | 1;
 type PetState = 'walk' | 'idle' | 'travel';
@@ -31,7 +32,8 @@ export class PokemonPetController {
 	private plugin: PokemonPetPlugin;
 	private rootEl: HTMLDivElement | null = null;
 	private petEl: HTMLButtonElement | null = null;
-	private spriteEl: HTMLImageElement | null = null;
+	private spriteEl: HTMLCanvasElement | null = null;
+	private animator: PokemonSpriteAnimator | null = null;
 	private menuEl: HTMLDivElement | null = null;
 	private wildEl: HTMLButtonElement | null = null;
 	private activePokemon: PokemonEntry | null = null;
@@ -72,7 +74,8 @@ export class PokemonPetController {
 			cls: 'pokemon-pet pokemon-pet-walk',
 			attr: { type: 'button', 'aria-label': 'Open pokemon pet menu' },
 		});
-		this.spriteEl = this.petEl.createEl('img', { cls: 'pokemon-pet-sprite' });
+		this.spriteEl = this.petEl.createEl('canvas', { cls: 'pokemon-pet-sprite' });
+		this.animator = new PokemonSpriteAnimator(this.spriteEl);
 		this.petEl.createDiv({ cls: 'pokemon-pet-emote', text: '!' });
 		this.petEl.createDiv({ cls: 'pokemon-pet-shadow' });
 
@@ -99,6 +102,7 @@ export class PokemonPetController {
 		this.rootEl = null;
 		this.petEl = null;
 		this.spriteEl = null;
+		this.animator = null;
 		this.menuEl = null;
 		this.wildEl = null;
 		this.currentSurface = null;
@@ -118,8 +122,9 @@ export class PokemonPetController {
 
 		this.rootEl.removeClass('is-hidden');
 		this.activePokemon = await this.plugin.getPokemon(this.plugin.settings.activePokemonId);
-		this.spriteEl.src = this.activePokemon.spriteUrl;
-		this.spriteEl.alt = this.activePokemon.name;
+		this.spriteEl.setAttribute('aria-label', this.activePokemon.name);
+		this.animator?.load(this.activePokemon.stillSpriteUrl);
+		this.animator?.setState(this.getAnimationState());
 		this.petEl.style.setProperty('--pokemon-pet-size', `${this.plugin.settings.size}px`);
 		this.petEl.setAttribute('aria-label', `Open ${this.activePokemon.name} menu`);
 		this.renderMenu();
@@ -134,11 +139,13 @@ export class PokemonPetController {
 		if (this.isMenuOpen()) {
 			this.lastFrameAt = now;
 			this.petEl.addClass('pokemon-pet-paused');
+			this.animator?.setState('idle');
 			return;
 		}
 
 		this.petEl.removeClass('pokemon-pet-paused');
 		this.updateMovement(now);
+		this.animator?.tick(now);
 
 		if (this.plugin.settings.encountersEnabled && now - this.lastEncounterAt > ENCOUNTER_INTERVAL) {
 			this.lastEncounterAt = now;
@@ -381,6 +388,7 @@ export class PokemonPetController {
 			return;
 		}
 		this.petEl?.addClass('pokemon-pet-paused');
+		this.animator?.setState('idle');
 		this.renderMenu(true);
 	}
 
@@ -389,6 +397,7 @@ export class PokemonPetController {
 		this.menuEl = null;
 		this.petEl?.removeClass('pokemon-pet-paused');
 		this.lastFrameAt = window.performance.now();
+		this.animator?.setState(this.getAnimationState());
 	}
 
 	private renderMenu(open = this.menuEl?.isConnected ?? false): void {
@@ -508,10 +517,14 @@ export class PokemonPetController {
 				return;
 			}
 			this.petEl.addClass('pokemon-pet-react');
+			this.animator?.setState('react');
 			if (timeout) {
 				window.clearTimeout(timeout);
 			}
-			timeout = window.setTimeout(() => this.petEl?.removeClass('pokemon-pet-react'), 650);
+			timeout = window.setTimeout(() => {
+				this.petEl?.removeClass('pokemon-pet-react');
+				this.animator?.setState(this.getAnimationState());
+			}, 650);
 		};
 		doc.addEventListener('keydown', onKeydown, true);
 		return () => {
@@ -637,6 +650,17 @@ export class PokemonPetController {
 		} else {
 			this.petEl.addClass('pokemon-pet-travel');
 		}
+		this.animator?.setState(this.getAnimationState());
+	}
+
+	private getAnimationState(): SpriteAnimationState {
+		if (this.state === 'walk') {
+			return 'walk';
+		}
+		if (this.state === 'travel') {
+			return 'travel';
+		}
+		return 'idle';
 	}
 }
 

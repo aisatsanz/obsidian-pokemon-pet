@@ -85,10 +85,25 @@
 	animation: pokemon-pet-emote 650ms steps(2, end);
 }
 
+.pokemon-pet-pomodoro-done {
+	animation: pokemon-pet-pomodoro-done 800ms steps(4, end) 4;
+	filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.25)) saturate(1.25);
+}
+
+.pokemon-pet-pomodoro-done .pokemon-pet-emote {
+	right: -10px;
+	display: block;
+	width: 42px;
+	border-color: var(--text-accent);
+	color: var(--text-accent);
+	font-size: 10px;
+	animation: pokemon-pet-pomodoro-emote 800ms steps(2, end) 4;
+}
+
 .pokemon-pet-menu {
 	position: fixed;
 	width: 292px;
-	max-height: min(420px, calc(100vh - 32px));
+	max-height: min(520px, calc(100vh - 32px));
 	padding: 10px;
 	border: 2px solid var(--text-normal);
 	border-radius: 8px;
@@ -156,6 +171,87 @@
 
 .pokemon-pet-field input {
 	width: 100%;
+}
+
+.pokemon-pet-pomodoro {
+	display: grid;
+	gap: 8px;
+	padding: 8px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
+}
+
+.pokemon-pet-pomodoro-readout {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
+}
+
+.pokemon-pet-pomodoro-status {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: 700;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pokemon-pet-pomodoro-time {
+	font-family: var(--font-monospace);
+	font-size: 18px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.pokemon-pet-pomodoro-presets {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 6px;
+}
+
+.pokemon-pet-pomodoro-preset {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+	height: 46px;
+	padding: 5px 4px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+.pokemon-pet-pomodoro-preset:hover,
+.pokemon-pet-pomodoro-preset.is-active {
+	border-color: var(--text-accent);
+	background: var(--background-modifier-hover);
+}
+
+.pokemon-pet-pomodoro-preset span:first-child {
+	font-family: var(--font-monospace);
+	font-size: 14px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.pokemon-pet-pomodoro-preset span:last-child {
+	overflow: hidden;
+	color: var(--text-muted);
+	font-size: 10px;
+	line-height: 1.1;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pokemon-pet-pomodoro-actions {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 7px;
 }
 
 .pokemon-pet-collection {
@@ -319,6 +415,32 @@
 	}
 	50% {
 		translate: 0 -5px;
+	}
+}
+
+@keyframes pokemon-pet-pomodoro-done {
+	0%,
+	100% {
+		translate: 0 0;
+	}
+	25% {
+		translate: 0 -8px;
+	}
+	50% {
+		translate: 0 0;
+	}
+	75% {
+		translate: 0 -4px;
+	}
+}
+
+@keyframes pokemon-pet-pomodoro-emote {
+	0%,
+	100% {
+		translate: 0 0;
+	}
+	50% {
+		translate: 0 -7px;
 	}
 }
 

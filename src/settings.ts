@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import PokemonPetPlugin from './main';
+import { POMODORO_PRESETS, PomodoroPresetId } from './pomodoro';
 
 export interface PokemonPetSettings {
 	settingsVersion: number;
@@ -10,6 +11,7 @@ export interface PokemonPetSettings {
 	encountersEnabled: boolean;
 	encounterChance: number;
 	useRemotePokemonData: boolean;
+	pomodoroPresetId: PomodoroPresetId;
 	pokemonCache: Record<string, unknown>;
 }
 
@@ -22,6 +24,7 @@ export const DEFAULT_SETTINGS: PokemonPetSettings = {
 	encountersEnabled: true,
 	encounterChance: 0.08,
 	useRemotePokemonData: true,
+	pomodoroPresetId: 'focus-25',
 	pokemonCache: {},
 };
 
@@ -101,6 +104,28 @@ export class PokemonPetSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.useRemotePokemonData)
 					.onChange(async (value) => {
 						this.plugin.settings.useRemotePokemonData = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl).setName('Pomodoro').setHeading();
+
+		new Setting(containerEl)
+			.setName('Default timer')
+			.setDesc('Preset used by the pet menu and the start command.')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions(
+						Object.fromEntries(
+							POMODORO_PRESETS.map((preset) => [
+								preset.id,
+								`${preset.shortLabel} ${preset.label}`,
+							]),
+						),
+					)
+					.setValue(this.plugin.settings.pomodoroPresetId)
+					.onChange(async (value) => {
+						this.plugin.settings.pomodoroPresetId = value as PomodoroPresetId;
 						await this.plugin.saveSettings();
 					}),
 			);

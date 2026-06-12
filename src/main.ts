@@ -6,6 +6,7 @@ import {
 	PokemonPetSettingTab,
 	PokemonPetSettings,
 } from './settings';
+import { normalizePomodoroPresetId } from './pomodoro';
 import { PokemonWikiClient } from './wiki-client';
 
 export default class PokemonPetPlugin extends Plugin {
@@ -42,6 +43,22 @@ export default class PokemonPetPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: 'start-pomodoro',
+			name: 'Start pomodoro',
+			callback: () => {
+				this.controller.startPomodoro();
+			},
+		});
+
+		this.addCommand({
+			id: 'stop-pomodoro',
+			name: 'Stop pomodoro',
+			callback: () => {
+				this.controller.stopPomodoro();
+			},
+		});
+
 		this.addSettingTab(new PokemonPetSettingTab(this.app, this));
 		this.startLoop();
 	}
@@ -72,6 +89,7 @@ export default class PokemonPetPlugin extends Plugin {
 			encounterChance: shouldMigrate
 				? DEFAULT_SETTINGS.encounterChance
 				: clampNumber(loaded.encounterChance ?? DEFAULT_SETTINGS.encounterChance, 0.01, 0.2),
+			pomodoroPresetId: normalizePomodoroPresetId(loaded.pomodoroPresetId),
 			pokemonCache: shouldMigrate ? {} : loaded.pokemonCache ?? {},
 		};
 		if (!this.settings.collection.includes(this.settings.activePokemonId)) {

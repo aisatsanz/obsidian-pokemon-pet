@@ -8,6 +8,12 @@ import {
 	getPokemonName,
 	makeStaticSpriteUrl,
 } from './pokemon';
+import {
+	POMODORO_PRESETS,
+	PomodoroPresetId,
+	formatPomodoroTime,
+	getPomodoroPreset,
+} from './pomodoro';
 import { PokemonSpriteAnimator, SpriteAnimationState } from './sprite-animator';
 
 type Direction = -1 | 1;
@@ -33,9 +39,12 @@ export class PokemonPetController {
 	private rootEl: HTMLDivElement | null = null;
 	private petEl: HTMLButtonElement | null = null;
 	private spriteEl: HTMLCanvasElement | null = null;
+	private emoteEl: HTMLDivElement | null = null;
 	private animator: PokemonSpriteAnimator | null = null;
 	private menuEl: HTMLDivElement | null = null;
 	private wildEl: HTMLButtonElement | null = null;
+	private pomodoroStatusEl: HTMLSpanElement | null = null;
+	private pomodoroRemainingEl: HTMLSpanElement | null = null;
 	private activePokemon: PokemonEntry | null = null;
 	private currentSurface: WalkSurface | null = null;
 	private targetSurface: WalkSurface | null = null;
@@ -53,6 +62,10 @@ export class PokemonPetController {
 	private startY = FALLBACK_BOTTOM_OFFSET;
 	private targetX = 80;
 	private targetY = FALLBACK_BOTTOM_OFFSET;
+	private pomodoroPresetId: PomodoroPresetId = 'focus-25';
+	private pomodoroEndsAt = 0;
+	private lastPomodoroDisplaySecond = -1;
+	private reactionResetTimeout: number | undefined;
 	private removeTypingListener: (() => void) | null = null;
 
 	constructor(plugin: PokemonPetPlugin) {
@@ -76,7 +89,7 @@ export class PokemonPetController {
 		});
 		this.spriteEl = this.petEl.createEl('canvas', { cls: 'pokemon-pet-sprite' });
 		this.animator = new PokemonSpriteAnimator(this.spriteEl);
-		this.petEl.createDiv({ cls: 'pokemon-pet-emote', text: '!' });
+		this.emoteEl = this.petEl.createDiv({ cls: 'pokemon-pet-emote', text: '!' });
 
 		this.currentSurface = this.pickSurface();
 		this.snapToSurface(this.currentSurface);
@@ -101,11 +114,18 @@ export class PokemonPetController {
 		this.rootEl = null;
 		this.petEl = null;
 		this.spriteEl = null;
+		this.emoteEl = null;
 		this.animator = null;
 		this.menuEl = null;
 		this.wildEl = null;
+		this.pomodoroStatusEl = null;
+		this.pomodoroRemainingEl = null;
 		this.currentSurface = null;
 		this.targetSurface = null;
+		if (this.reactionResetTimeout) {
+			window.clearTimeout(this.reactionResetTimeout);
+			this.reactionResetTimeout = undefined;
+		}
 		this.removeTypingListener = null;
 	}
 
@@ -131,14 +151,24 @@ export class PokemonPetController {
 	}
 
 	async tick(now: number): Promise<void> {
-		if (!this.rootEl || !this.petEl || this.plugin.settings.hidden) {
+		if (!this.rootEl || !this.petEl) {
+			return;
+		}
+
+		this.updatePomodoro(now);
+
+		if (this.plugin.settings.hidden) {
 			return;
 		}
 
 		if (this.isMenuOpen()) {
 			this.lastFrameAt = now;
 			this.petEl.addClass('pokemon-pet-paused');
-			this.animator?.setState('idle');
+			if (this.petEl.classList.contains('pokemon-pet-react')) {
+				this.animator?.tick(now);
+			} else {
+				this.animator?.setState('idle');
+			}
 			return;
 		}
 
@@ -152,6 +182,33 @@ export class PokemonPetController {
 				await this.spawnWildPokemon();
 			}
 		}
+	}
+
+	startPomodoro(presetId = this.plugin.settings.pomodoroPresetId): void {
+		const preset = getPomodoroPreset(presetId);
+		const now = window.performance.now();
+		this.pomodoroPresetId = preset.id;
+		this.pomodoroEndsAt = now + preset.minutes * 60_000;
+		this.lastPomodoroDisplaySecond = -1;
+		this.plugin.settings.pomodoroPresetId = preset.id;
+		void this.plugin.saveSettings();
+		this.updatePomodoroDisplay(now);
+		this.playPetReaction('GO', 900);
+		new Notice(`${preset.label} started: ${preset.minutes} minutes.`);
+		this.renderMenu();
+	}
+
+	stopPomodoro(showNotice = true): void {
+		if (!this.isPomodoroRunning()) {
+			return;
+		}
+		this.pomodoroEndsAt = 0;
+		this.lastPomodoroDisplaySecond = -1;
+		this.updatePomodoroDisplay(window.performance.now());
+		if (showNotice) {
+			new Notice('Pomodoro stopped.');
+		}
+		this.renderMenu();
 	}
 
 	private updateMovement(now: number): void {
@@ -381,6 +438,85 @@ export class PokemonPetController {
 		}, 720);
 	}
 
+	private updatePomodoro(now: number): void {
+		if (!this.isPomodoroRunning()) {
+			this.updatePomodoroDisplay(now);
+			return;
+		}
+
+		if (now >= this.pomodoroEndsAt) {
+			this.finishPomodoro(now);
+			return;
+		}
+
+		this.updatePomodoroDisplay(now);
+	}
+
+	private finishPomodoro(now: number): void {
+		const preset = getPomodoroPreset(this.pomodoroPresetId);
+		const pokemonName = this.activePokemon?.name ?? 'Pokemon';
+		this.pomodoroEndsAt = 0;
+		this.lastPomodoroDisplaySecond = -1;
+		this.updatePomodoroDisplay(now);
+		this.playPetReaction('DONE', 3_200, true);
+		new Notice(`${pokemonName}: ${preset.doneMessage}`);
+		this.renderMenu();
+	}
+
+	private isPomodoroRunning(): boolean {
+		return this.pomodoroEndsAt > 0;
+	}
+
+	private updatePomodoroDisplay(now: number): void {
+		if (!this.pomodoroStatusEl || !this.pomodoroRemainingEl) {
+			return;
+		}
+
+		if (!this.isPomodoroRunning()) {
+			const preset = getPomodoroPreset(this.plugin.settings.pomodoroPresetId);
+			this.pomodoroStatusEl.setText('Ready');
+			this.pomodoroRemainingEl.setText(formatPomodoroTime(preset.minutes * 60_000));
+			this.lastPomodoroDisplaySecond = -1;
+			return;
+		}
+
+		const remainingMs = Math.max(0, this.pomodoroEndsAt - now);
+		const remainingSecond = Math.ceil(remainingMs / 1_000);
+		if (remainingSecond === this.lastPomodoroDisplaySecond) {
+			return;
+		}
+
+		this.lastPomodoroDisplaySecond = remainingSecond;
+		const preset = getPomodoroPreset(this.pomodoroPresetId);
+		this.pomodoroStatusEl.setText(preset.label);
+		this.pomodoroRemainingEl.setText(formatPomodoroTime(remainingMs));
+	}
+
+	private playPetReaction(text: string, duration: number, isPomodoroDone = false): void {
+		if (!this.petEl) {
+			return;
+		}
+
+		if (this.reactionResetTimeout) {
+			window.clearTimeout(this.reactionResetTimeout);
+		}
+
+		this.emoteEl?.setText(text);
+		this.petEl.addClass('pokemon-pet-react');
+		if (isPomodoroDone) {
+			this.petEl.addClass('pokemon-pet-pomodoro-done');
+		} else {
+			this.petEl.removeClass('pokemon-pet-pomodoro-done');
+		}
+		this.animator?.setState('react');
+		this.reactionResetTimeout = window.setTimeout(() => {
+			this.petEl?.removeClass('pokemon-pet-react', 'pokemon-pet-pomodoro-done');
+			this.emoteEl?.setText('!');
+			this.animator?.setState(this.isMenuOpen() ? 'idle' : this.getAnimationState());
+			this.reactionResetTimeout = undefined;
+		}, duration);
+	}
+
 	private toggleMenu(): void {
 		if (this.menuEl?.isConnected) {
 			this.closeMenu();
@@ -427,6 +563,7 @@ export class PokemonPetController {
 		title.createSpan({ text: `Lv.${this.activePokemon.level} · ${RARITY_LABELS[this.activePokemon.rarity]}` });
 
 		this.createSizeControl(this.menuEl);
+		this.createPomodoroControl(this.menuEl);
 		this.createCollection(this.menuEl);
 
 		const actions = this.menuEl.createDiv({ cls: 'pokemon-pet-menu-actions' });
@@ -469,6 +606,57 @@ export class PokemonPetController {
 				this.snapToSurface(this.currentSurface);
 			})();
 		});
+	}
+
+	private createPomodoroControl(container: HTMLElement): void {
+		const field = container.createDiv({ cls: 'pokemon-pet-field' });
+		field.createEl('label', { text: 'Pomodoro' });
+		const panel = field.createDiv({ cls: 'pokemon-pet-pomodoro' });
+		const readout = panel.createDiv({ cls: 'pokemon-pet-pomodoro-readout' });
+		this.pomodoroStatusEl = readout.createSpan({ cls: 'pokemon-pet-pomodoro-status' });
+		this.pomodoroRemainingEl = readout.createSpan({ cls: 'pokemon-pet-pomodoro-time' });
+
+		const presets = panel.createDiv({ cls: 'pokemon-pet-pomodoro-presets' });
+		const activePresetId = this.isPomodoroRunning()
+			? this.pomodoroPresetId
+			: this.plugin.settings.pomodoroPresetId;
+		for (const preset of POMODORO_PRESETS) {
+			const isActive = preset.id === activePresetId;
+			const button = presets.createEl('button', {
+				cls: `pokemon-pet-pomodoro-preset${isActive ? ' is-active' : ''}`,
+				attr: { type: 'button' },
+			});
+			button.createSpan({ text: preset.shortLabel });
+			button.createSpan({ text: preset.label });
+			button.addEventListener('click', () => {
+				void (async () => {
+					this.plugin.settings.pomodoroPresetId = preset.id;
+					await this.plugin.saveSettings();
+					this.renderMenu(true);
+				})();
+			});
+		}
+
+		const actions = panel.createDiv({ cls: 'pokemon-pet-pomodoro-actions' });
+		actions.createEl('button', {
+			text: this.isPomodoroRunning() ? 'Restart' : 'Start',
+			cls: 'pokemon-pet-menu-button mod-cta',
+			attr: { type: 'button' },
+		}).addEventListener('click', () => {
+			this.startPomodoro();
+		});
+
+		const stopButton = actions.createEl('button', {
+			text: 'Stop',
+			cls: 'pokemon-pet-menu-button',
+			attr: { type: 'button' },
+		});
+		stopButton.disabled = !this.isPomodoroRunning();
+		stopButton.addEventListener('click', () => {
+			this.stopPomodoro();
+		});
+
+		this.updatePomodoroDisplay(window.performance.now());
 	}
 
 	private createCollection(container: HTMLElement): void {
@@ -515,14 +703,15 @@ export class PokemonPetController {
 			if (!this.petEl || this.plugin.settings.hidden || this.isMenuOpen()) {
 				return;
 			}
-			this.petEl.addClass('pokemon-pet-react');
-			this.animator?.setState('react');
+			if (this.petEl.classList.contains('pokemon-pet-pomodoro-done')) {
+				return;
+			}
+			this.playPetReaction('!', 650);
 			if (timeout) {
 				window.clearTimeout(timeout);
 			}
 			timeout = window.setTimeout(() => {
-				this.petEl?.removeClass('pokemon-pet-react');
-				this.animator?.setState(this.getAnimationState());
+				this.petEl?.removeClass('pokemon-pet-react', 'pokemon-pet-pomodoro-done');
 			}, 650);
 		};
 		doc.addEventListener('keydown', onKeydown, true);

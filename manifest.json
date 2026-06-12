@@ -1,0 +1,9 @@
+{
+	"id": "pokemon-pet",
+	"name": "Pokemon Pet",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Adds a collectible Pokemon pet that wanders around your Obsidian window.",
+	"author": "Vadim",
+	"isDesktopOnly": false
+}

@@ -4,6 +4,6 @@
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
 	"description": "Adds a collectible Pokemon pet that wanders around your Obsidian window.",
-	"author": "Vadim",
+	"author": "aisatsanz",
 	"isDesktopOnly": false
 }

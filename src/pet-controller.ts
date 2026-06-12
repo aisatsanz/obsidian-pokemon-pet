@@ -25,7 +25,7 @@ const ENCOUNTER_INTERVAL = 75_000;
 const FIRST_ENCOUNTER_DELAY = 90_000;
 const MIN_SURFACE_SWITCH_DELAY = 55_000;
 const MAX_SURFACE_SWITCH_DELAY = 110_000;
-const SURFACE_FOOT_OFFSET = 4;
+const SURFACE_FOOT_OFFSET = 0;
 const FALLBACK_BOTTOM_OFFSET = 24;
 
 export class PokemonPetController {
@@ -77,7 +77,6 @@ export class PokemonPetController {
 		this.spriteEl = this.petEl.createEl('canvas', { cls: 'pokemon-pet-sprite' });
 		this.animator = new PokemonSpriteAnimator(this.spriteEl);
 		this.petEl.createDiv({ cls: 'pokemon-pet-emote', text: '!' });
-		this.petEl.createDiv({ cls: 'pokemon-pet-shadow' });
 
 		this.currentSurface = this.pickSurface();
 		this.snapToSurface(this.currentSurface);
@@ -541,13 +540,6 @@ export class PokemonPetController {
 			return this.getFallbackSurface();
 		}
 
-		const activeLine = candidates.find((surface) =>
-			surface.element?.matches('.cm-activeLine, .cm-line.cm-active'),
-		);
-		if (activeLine && Math.random() < 0.7) {
-			return activeLine;
-		}
-
 		const filtered = candidates.filter((surface) => surface.element !== exclude?.element);
 		const pool = filtered.length > 0 ? filtered : candidates;
 		return pool[Math.floor(Math.random() * pool.length)] ?? this.getFallbackSurface();
@@ -555,14 +547,14 @@ export class PokemonPetController {
 
 	private getSurfaceCandidates(): WalkSurface[] {
 		const selector = [
-			'.workspace-leaf.mod-active .cm-activeLine',
-			'.workspace-leaf.mod-active .cm-line',
-			'.workspace-leaf.mod-active .markdown-preview-view p',
-			'.workspace-leaf.mod-active .markdown-preview-view li',
-			'.workspace-leaf.mod-active .markdown-preview-view img',
-			'.workspace-leaf.mod-active .markdown-preview-view pre',
-			'.workspace-leaf.mod-active .markdown-preview-view table',
-			'.workspace-leaf.mod-active .markdown-preview-view .callout',
+			'img',
+			'video',
+			'.workspace-leaf',
+			'.cm-callout',
+			'.HyperMD-codeblock-begin',
+			'.status-bar',
+			'.mobile-navbar',
+			'.callout',
 		].join(', ');
 		const elements = Array.from(activeDocument.querySelectorAll<HTMLElement>(selector));
 		const surfaces = elements
@@ -575,14 +567,14 @@ export class PokemonPetController {
 	private surfaceFromElement(element: HTMLElement): WalkSurface | null {
 		const rect = element.getBoundingClientRect();
 		const style = activeWindow.getComputedStyle(element);
-		const minWidth = Math.max(180, this.plugin.settings.size * 2.4);
+		const minWidth = 100;
 
 		if (
 			rect.width < minWidth ||
-			rect.top < 84 ||
-			rect.top > activeWindow.innerHeight - this.plugin.settings.size - 36 ||
-			rect.right < 12 ||
-			rect.left > activeWindow.innerWidth - 12 ||
+			rect.left < 0 ||
+			rect.top < 80 ||
+			rect.right > activeWindow.innerWidth ||
+			rect.top > activeWindow.innerHeight ||
 			style.display === 'none' ||
 			style.visibility === 'hidden' ||
 			Number(style.opacity) < 0.2

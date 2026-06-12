@@ -62,16 +62,6 @@
 	-webkit-user-drag: none;
 }
 
-.pokemon-pet-shadow {
-	position: absolute;
-	left: 24%;
-	right: 24%;
-	bottom: 2px;
-	height: 5px;
-	background: rgba(0, 0, 0, 0.28);
-	image-rendering: pixelated;
-}
-
 .pokemon-pet-emote {
 	position: absolute;
 	top: -8px;

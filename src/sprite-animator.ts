@@ -167,12 +167,12 @@ export class PokemonSpriteAnimator {
 	private getPose(): { x: number; y: number; width: number; height: number } {
 		const width = this.image.naturalWidth || this.image.width;
 		const height = this.image.naturalHeight || this.image.height;
-		const scale = Math.min(1, (CANVAS_SIZE - 14) / Math.max(width, height));
+		const scale = Math.min(1, (CANVAS_SIZE - 6) / Math.max(width, height));
 		const frameWidth = Math.max(1, Math.round(width * scale));
 		const frameHeight = Math.max(1, Math.round(height * scale));
 		return {
 			x: Math.round((CANVAS_SIZE - frameWidth) / 2),
-			y: Math.round(CANVAS_SIZE - frameHeight - 8),
+			y: Math.round(CANVAS_SIZE - frameHeight),
 			width: frameWidth,
 			height: frameHeight,
 		};

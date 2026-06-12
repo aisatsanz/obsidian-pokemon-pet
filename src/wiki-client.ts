@@ -4,6 +4,7 @@ import {
 	PokemonEntry,
 	PokemonRarity,
 	getFallbackPokemon,
+	makeStaticSpriteUrl,
 	makeSpriteUrl,
 	makeWikiUrl,
 } from './pokemon';
@@ -13,9 +14,14 @@ interface PokeApiPokemon {
 	id: number;
 	name: string;
 	sprites?: {
-		other?: {
-			'official-artwork'?: {
-				front_default?: string;
+		versions?: {
+			'generation-v'?: {
+				'black-white'?: {
+					animated?: {
+						front_default?: string;
+					};
+					front_default?: string;
+				};
 			};
 		};
 		front_default?: string;
@@ -45,6 +51,7 @@ export class PokemonWikiClient {
 			]);
 			const name = this.getEnglishName(species) ?? titleCase(pokemon.name);
 			const captureRate = species.capture_rate ?? fallback.captureRate ?? 255;
+			const blackWhiteSprites = pokemon.sprites?.versions?.['generation-v']?.['black-white'];
 
 			return {
 				id: pokemon.id,
@@ -54,9 +61,14 @@ export class PokemonWikiClient {
 				types: pokemon.types?.map((entry) => entry.type.name) ?? fallback.types,
 				captureRate,
 				spriteUrl:
-					pokemon.sprites?.other?.['official-artwork']?.front_default ??
+					blackWhiteSprites?.animated?.front_default ??
+					blackWhiteSprites?.front_default ??
 					pokemon.sprites?.front_default ??
 					makeSpriteUrl(id),
+				stillSpriteUrl:
+					blackWhiteSprites?.front_default ??
+					pokemon.sprites?.front_default ??
+					makeStaticSpriteUrl(id),
 				wikiUrl: makeWikiUrl(name),
 			};
 		} catch {

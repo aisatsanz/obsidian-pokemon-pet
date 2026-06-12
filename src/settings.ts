@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting } from 'obsidian';
 import PokemonPetPlugin from './main';
 
 export interface PokemonPetSettings {
+	settingsVersion: number;
 	activePokemonId: number;
 	collection: number[];
 	hidden: boolean;
@@ -13,12 +14,13 @@ export interface PokemonPetSettings {
 }
 
 export const DEFAULT_SETTINGS: PokemonPetSettings = {
+	settingsVersion: 2,
 	activePokemonId: 25,
 	collection: [25],
 	hidden: false,
-	size: 96,
+	size: 64,
 	encountersEnabled: true,
-	encounterChance: 0.35,
+	encounterChance: 0.08,
 	useRemotePokemonData: true,
 	pokemonCache: {},
 };
@@ -55,7 +57,7 @@ export class PokemonPetSettingTab extends PluginSettingTab {
 			.setDesc('Controls the size of the active pokemon.')
 			.addSlider((slider) =>
 				slider
-					.setLimits(48, 180, 4)
+					.setLimits(40, 112, 4)
 					.setDynamicTooltip()
 					.setValue(this.plugin.settings.size)
 					.onChange(async (value) => {
@@ -79,10 +81,10 @@ export class PokemonPetSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Encounter rate')
-			.setDesc('Higher values create more frequent wild pokemon checks.')
+			.setDesc('Higher values create more frequent wild pokemon checks. Keep this low for a calmer pet.')
 			.addSlider((slider) =>
 				slider
-					.setLimits(0.05, 1, 0.05)
+					.setLimits(0.01, 0.2, 0.01)
 					.setDynamicTooltip()
 					.setValue(this.plugin.settings.encounterChance)
 					.onChange(async (value) => {

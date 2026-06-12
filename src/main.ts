@@ -54,22 +54,31 @@ export default class PokemonPetPlugin extends Plugin {
 	}
 
 	private async toggleHidden(): Promise<void> {
-			this.settings.hidden = !this.settings.hidden;
-			await this.saveSettings();
-			await this.refreshPet();
-			new Notice(this.settings.hidden ? 'Pokemon hidden.' : 'Pokemon is back.');
+		this.settings.hidden = !this.settings.hidden;
+		await this.saveSettings();
+		await this.refreshPet();
+		new Notice(this.settings.hidden ? 'Pokemon hidden.' : 'Pokemon is back.');
 	}
 
 	async loadSettings(): Promise<void> {
 		const loaded = ((await this.loadData()) ?? {}) as Partial<PokemonPetSettings>;
+		const shouldMigrate = loaded.settingsVersion !== DEFAULT_SETTINGS.settingsVersion;
 		this.settings = {
 			...DEFAULT_SETTINGS,
 			...loaded,
+			settingsVersion: DEFAULT_SETTINGS.settingsVersion,
 			collection: normalizeCollection(loaded.collection),
-			pokemonCache: loaded.pokemonCache ?? {},
+			size: clampNumber(loaded.size ?? DEFAULT_SETTINGS.size, 40, 112),
+			encounterChance: shouldMigrate
+				? DEFAULT_SETTINGS.encounterChance
+				: clampNumber(loaded.encounterChance ?? DEFAULT_SETTINGS.encounterChance, 0.01, 0.2),
+			pokemonCache: shouldMigrate ? {} : loaded.pokemonCache ?? {},
 		};
 		if (!this.settings.collection.includes(this.settings.activePokemonId)) {
 			this.settings.activePokemonId = 25;
+		}
+		if (shouldMigrate) {
+			await this.saveSettings();
 		}
 	}
 
@@ -83,7 +92,7 @@ export default class PokemonPetPlugin extends Plugin {
 
 	async getPokemon(id: number): Promise<PokemonEntry> {
 		const cached = this.settings.pokemonCache[String(id)] as PokemonEntry | undefined;
-		if (cached) {
+		if (cached && isPixelSprite(cached)) {
 			return cached;
 		}
 
@@ -124,4 +133,12 @@ function normalizeCollection(collection: number[] | undefined): number[] {
 	const knownIds = new Set(FALLBACK_POKEMON.map((pokemon) => pokemon.id));
 	const values = collection?.filter((id) => knownIds.has(id) || Boolean(getFallbackPokemon(id))) ?? [];
 	return Array.from(new Set([25, ...values])).sort((a, b) => a - b);
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+	return Math.min(max, Math.max(min, value));
+}
+
+function isPixelSprite(pokemon: PokemonEntry): boolean {
+	return Boolean(pokemon.stillSpriteUrl) && !pokemon.spriteUrl.includes('/official-artwork/');
 }

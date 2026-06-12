@@ -6,17 +6,18 @@ The first unlocked Pokemon is Pikachu. Your active Pokemon wanders along the bot
 
 ## Features
 
-- Floating Pokemon pet inside Obsidian.
+- Pixel Pokemon pet inside Obsidian.
 - Pikachu unlocked by default.
-- Wild encounters weighted by rarity.
+- Calm pet-app style movement with long idle/walk phases and rare perching on note content.
+- Rare wild encounters weighted by rarity.
 - Catch animation with a Pokeball.
-- Pet menu for size, active Pokemon selection, wiki link, and hiding the pet.
-- Typing reaction animation.
+- Pet menu for size, collection selection, wiki link, and hiding the pet.
+- Pixel-style typing reaction.
 - Optional remote Pokemon data lookup with local fallback data.
 
 ## Data sources
 
-The plugin keeps a small bundled fallback roster so it works offline. When remote data is enabled, it fetches structured Pokemon data from the public PokeAPI and links each Pokemon to its Pokemon Wiki page. No vault content is sent to external services.
+The plugin keeps a small bundled fallback roster so it works offline. When remote data is enabled, it fetches structured Pokemon data and pixel sprites from the public PokeAPI and links each Pokemon to its Pokemon Wiki page. No vault content is sent to external services.
 
 ## Development
 

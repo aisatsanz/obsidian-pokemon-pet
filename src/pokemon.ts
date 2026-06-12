@@ -6,6 +6,7 @@ export interface PokemonEntry {
 	level: number;
 	rarity: PokemonRarity;
 	spriteUrl: string;
+	stillSpriteUrl: string;
 	wikiUrl: string;
 	types: string[];
 	captureRate?: number;
@@ -20,11 +21,11 @@ export const RARITY_LABELS: Record<PokemonRarity, string> = {
 };
 
 export const RARITY_WEIGHTS: Record<PokemonRarity, number> = {
-	common: 64,
-	uncommon: 24,
-	rare: 9,
-	legendary: 2,
-	mythical: 1,
+	common: 80,
+	uncommon: 16,
+	rare: 3,
+	legendary: 0.7,
+	mythical: 0.3,
 };
 
 export const FALLBACK_POKEMON: PokemonEntry[] = [
@@ -54,7 +55,11 @@ export function getPokemonName(id: number): string {
 }
 
 export function makeSpriteUrl(id: number): string {
-	return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+	return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${id}.gif`;
+}
+
+export function makeStaticSpriteUrl(id: number): string {
+	return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
 }
 
 export function makeWikiUrl(name: string): string {
@@ -77,6 +82,7 @@ function makePokemon(
 		types,
 		captureRate,
 		spriteUrl: makeSpriteUrl(id),
+		stillSpriteUrl: makeStaticSpriteUrl(id),
 		wikiUrl: makeWikiUrl(name),
 	};
 }

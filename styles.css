@@ -10,7 +10,7 @@
 }
 
 .pokemon-pet {
-	--pokemon-pet-size: 96px;
+	--pokemon-pet-size: 64px;
 	position: fixed;
 	left: 0;
 	bottom: 0;
@@ -22,64 +22,90 @@
 	cursor: pointer;
 	pointer-events: auto;
 	transform-origin: center bottom;
-	transition: filter 160ms ease;
+	transition: filter 120ms steps(2, end);
 }
 
-.pokemon-pet:hover {
-	filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.22));
+.pokemon-pet:hover,
+.pokemon-pet-paused {
+	filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.25));
 }
 
 .pokemon-pet-sprite {
 	position: relative;
-	z-index: 1;
+	z-index: 2;
 	display: block;
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
+	image-rendering: pixelated;
+	image-rendering: crisp-edges;
 	user-select: none;
 	-webkit-user-drag: none;
 }
 
 .pokemon-pet-shadow {
 	position: absolute;
-	left: 18%;
-	right: 18%;
-	bottom: 3%;
-	height: 12%;
-	border-radius: 999px;
-	background: rgba(0, 0, 0, 0.22);
-	filter: blur(3px);
+	left: 24%;
+	right: 24%;
+	bottom: 2px;
+	height: 5px;
+	background: rgba(0, 0, 0, 0.28);
+	image-rendering: pixelated;
 }
 
-.pokemon-pet-walk .pokemon-pet-sprite {
-	animation: pokemon-pet-walk 820ms ease-in-out infinite;
+.pokemon-pet-emote {
+	position: absolute;
+	top: -8px;
+	right: 6px;
+	z-index: 3;
+	display: none;
+	width: 16px;
+	height: 16px;
+	border: 2px solid var(--text-normal);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 13px;
+	text-align: center;
+	transform: scaleX(var(--pokemon-pet-face, 1));
 }
 
-.pokemon-pet-perch .pokemon-pet-sprite {
-	animation: pokemon-pet-perch 980ms ease-in-out infinite;
-}
-
-.pokemon-pet-react .pokemon-pet-sprite {
-	animation: pokemon-pet-react 520ms ease-out;
+.pokemon-pet-react .pokemon-pet-emote {
+	display: block;
+	animation: pokemon-pet-emote 650ms steps(2, end);
 }
 
 .pokemon-pet-menu {
 	position: fixed;
-	width: 250px;
-	padding: 12px;
-	border: 1px solid var(--background-modifier-border);
+	width: 292px;
+	max-height: min(420px, calc(100vh - 32px));
+	padding: 10px;
+	border: 2px solid var(--text-normal);
 	border-radius: 8px;
-	background: var(--background-primary);
-	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 42px),
+		var(--background-primary);
+	box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.22);
 	pointer-events: auto;
+	overflow: auto;
+}
+
+.pokemon-pet-menu-header {
+	display: grid;
+	grid-template-columns: 54px 1fr;
+	gap: 10px;
+	align-items: center;
+	padding: 8px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
 }
 
 .pokemon-pet-menu-title {
 	display: grid;
-	grid-template-columns: 1fr auto;
-	gap: 2px 10px;
-	align-items: center;
-	margin-bottom: 10px;
+	gap: 3px;
+	min-width: 0;
 }
 
 .pokemon-pet-menu-title strong,
@@ -90,33 +116,80 @@
 	white-space: nowrap;
 }
 
+.pokemon-pet-menu-title strong {
+	font-size: var(--font-ui-medium);
+}
+
 .pokemon-pet-menu-title span {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 }
 
 .pokemon-pet-menu-sprite {
-	grid-row: 1 / 3;
-	grid-column: 2;
-	width: 44px;
-	height: 44px;
+	width: 48px;
+	height: 48px;
 	object-fit: contain;
+	image-rendering: pixelated;
+	image-rendering: crisp-edges;
 }
 
 .pokemon-pet-field {
 	display: grid;
-	gap: 6px;
-	margin-top: 10px;
+	gap: 7px;
+	margin-top: 12px;
 }
 
 .pokemon-pet-field label {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
+	font-weight: 600;
 }
 
-.pokemon-pet-field input,
-.pokemon-pet-field select {
+.pokemon-pet-field input {
 	width: 100%;
+}
+
+.pokemon-pet-collection {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 7px;
+}
+
+.pokemon-pet-collection-item {
+	display: grid;
+	gap: 3px;
+	justify-items: center;
+	min-width: 0;
+	height: 76px;
+	padding: 6px 4px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+.pokemon-pet-collection-item:hover,
+.pokemon-pet-collection-item.is-active {
+	border-color: var(--text-accent);
+	background: var(--background-modifier-hover);
+}
+
+.pokemon-pet-collection-item img {
+	width: 38px;
+	height: 38px;
+	object-fit: contain;
+	image-rendering: pixelated;
+	image-rendering: crisp-edges;
+}
+
+.pokemon-pet-collection-item span {
+	max-width: 100%;
+	overflow: hidden;
+	font-size: 11px;
+	line-height: 1.2;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .pokemon-pet-menu-actions {
@@ -128,94 +201,97 @@
 }
 
 .pokemon-pet-link {
+	display: inline-flex;
+	align-items: center;
+	height: 30px;
+	padding: 0 10px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
 	color: var(--text-accent);
 	font-size: var(--font-ui-small);
 	text-decoration: none;
 }
 
-.pokemon-pet-menu button {
+.pokemon-pet-menu-button {
 	border-radius: 6px;
 }
 
 .pokemon-pet-wild {
 	position: fixed;
-	width: 86px;
-	height: 104px;
+	width: 76px;
+	height: 94px;
 	border: 0;
 	padding: 0;
 	background: transparent;
 	cursor: crosshair;
 	pointer-events: auto;
-	animation: pokemon-pet-wild 1600ms ease-in-out infinite;
+	animation: pokemon-pet-wild 1800ms steps(2, end) infinite;
 }
 
 .pokemon-pet-wild img {
-	width: 78px;
-	height: 78px;
+	width: 64px;
+	height: 64px;
 	object-fit: contain;
-	filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28));
+	image-rendering: pixelated;
+	image-rendering: crisp-edges;
 }
 
 .pokemon-pet-wild-label {
 	width: 100%;
 	padding: 3px 5px;
-	border-radius: 6px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 5px;
 	background: var(--background-primary);
-	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
 	color: var(--text-normal);
-	font-size: 11px;
+	font-size: 10px;
 	line-height: 1.2;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.pokemon-pet-rarity-common img {
-	filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.24));
+.pokemon-pet-rarity-uncommon .pokemon-pet-wild-label {
+	border-color: #3c9f67;
 }
 
-.pokemon-pet-rarity-uncommon img {
-	filter: drop-shadow(0 0 10px rgba(60, 180, 115, 0.55));
+.pokemon-pet-rarity-rare .pokemon-pet-wild-label {
+	border-color: #4b73d9;
 }
 
-.pokemon-pet-rarity-rare img {
-	filter: drop-shadow(0 0 12px rgba(70, 135, 255, 0.62));
-}
-
-.pokemon-pet-rarity-legendary img,
-.pokemon-pet-rarity-mythical img {
-	filter: drop-shadow(0 0 14px rgba(255, 205, 64, 0.78));
+.pokemon-pet-rarity-legendary .pokemon-pet-wild-label,
+.pokemon-pet-rarity-mythical .pokemon-pet-wild-label {
+	border-color: #d19a1d;
 }
 
 .pokemon-pet-wild.is-catching {
-	animation: pokemon-pet-caught 720ms ease-in forwards;
+	animation: pokemon-pet-caught 720ms steps(4, end) forwards;
 }
 
 .pokemon-pet-ball {
 	--pokemon-pet-ball-x: 0px;
 	--pokemon-pet-ball-y: 0px;
 	position: fixed;
-	width: 22px;
-	height: 22px;
-	border: 2px solid #252525;
+	width: 20px;
+	height: 20px;
+	border: 2px solid #202020;
 	border-radius: 50%;
 	background:
-		linear-gradient(#e83b45 0 46%, #252525 46% 54%, #f8f8f8 54% 100%);
-	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.26);
+		linear-gradient(#e84141 0 45%, #202020 45% 55%, #f7f3e8 55% 100%);
 	pointer-events: none;
-	animation: pokemon-pet-ball 720ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+	animation: pokemon-pet-ball 720ms steps(8, end) forwards;
 }
 
 .pokemon-pet-ball::after {
 	position: absolute;
-	inset: 6px;
-	border: 2px solid #252525;
+	inset: 5px;
+	border: 2px solid #202020;
 	border-radius: 50%;
-	background: #f8f8f8;
+	background: #f7f3e8;
 	content: '';
 }
 
-@keyframes pokemon-pet-walk {
+@keyframes pokemon-pet-emote {
 	0%,
 	100% {
 		translate: 0 0;
@@ -225,42 +301,13 @@
 	}
 }
 
-@keyframes pokemon-pet-perch {
-	0%,
-	100% {
-		rotate: -2deg;
-	}
-	50% {
-		rotate: 2deg;
-	}
-}
-
-@keyframes pokemon-pet-react {
-	0% {
-		scale: 1;
-		rotate: 0deg;
-	}
-	35% {
-		scale: 1.18;
-		rotate: -8deg;
-	}
-	70% {
-		scale: 0.96;
-		rotate: 5deg;
-	}
-	100% {
-		scale: 1;
-		rotate: 0deg;
-	}
-}
-
 @keyframes pokemon-pet-wild {
 	0%,
 	100% {
 		translate: 0 0;
 	}
 	50% {
-		translate: 0 -9px;
+		translate: 0 -4px;
 	}
 }
 
@@ -268,10 +315,6 @@
 	0% {
 		scale: 1;
 		opacity: 1;
-	}
-	70% {
-		scale: 0.4;
-		opacity: 0.9;
 	}
 	100% {
 		scale: 0;
@@ -282,10 +325,8 @@
 @keyframes pokemon-pet-ball {
 	0% {
 		translate: 0 0;
-		rotate: 0deg;
 	}
 	100% {
 		translate: var(--pokemon-pet-ball-x) var(--pokemon-pet-ball-y);
-		rotate: 680deg;
 	}
 }

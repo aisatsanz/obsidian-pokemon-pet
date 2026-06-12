@@ -102,6 +102,8 @@
 
 .pokemon-pet-menu {
 	position: fixed;
+	display: flex;
+	flex-direction: column;
 	width: 292px;
 	max-height: min(520px, calc(100vh - 32px));
 	padding: 10px;
@@ -112,7 +114,7 @@
 		var(--background-primary);
 	box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.22);
 	pointer-events: auto;
-	overflow: auto;
+	overflow: hidden;
 }
 
 .pokemon-pet-menu-header {
@@ -160,7 +162,13 @@
 .pokemon-pet-field {
 	display: grid;
 	gap: 7px;
+	min-height: 0;
 	margin-top: 12px;
+}
+
+.pokemon-pet-collection-field {
+	flex: 1 1 auto;
+	overflow: hidden;
 }
 
 .pokemon-pet-field label {
@@ -258,6 +266,9 @@
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 7px;
+	min-height: 0;
+	overflow: auto;
+	padding-right: 2px;
 }
 
 .pokemon-pet-collection-item {
@@ -280,12 +291,29 @@
 	background: var(--background-modifier-hover);
 }
 
+.pokemon-pet-collection-item.is-locked {
+	border-color: var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-faint);
+	cursor: default;
+	opacity: 0.82;
+}
+
+.pokemon-pet-collection-item.is-locked:hover {
+	border-color: var(--background-modifier-border);
+	background: var(--background-primary);
+}
+
 .pokemon-pet-collection-item img {
 	width: 38px;
 	height: 38px;
 	object-fit: contain;
 	image-rendering: pixelated;
 	image-rendering: crisp-edges;
+}
+
+.pokemon-pet-locked-sprite {
+	filter: brightness(0) saturate(0) opacity(0.72);
 }
 
 .pokemon-pet-collection-item span {

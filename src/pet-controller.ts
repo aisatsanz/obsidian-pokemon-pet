@@ -572,14 +572,26 @@ export class PokemonPetController {
 		this.menuEl = this.rootEl.createDiv({ cls: 'pokemon-pet-menu' });
 		const rect = this.petEl.getBoundingClientRect();
 		const menuWidth = 292;
+		const margin = 12;
+		const viewportHeight = activeWindow.innerHeight;
+		const spaceBelow = viewportHeight - rect.bottom - margin;
+		const spaceAbove = rect.top - margin;
+		const openBelow = spaceBelow >= 300 || spaceBelow >= spaceAbove;
+		const maxMenuHeight = Math.max(180, Math.min(560, viewportHeight - margin * 2));
+		const menuHeight = clamp(
+			openBelow ? spaceBelow : spaceAbove,
+			Math.min(260, maxMenuHeight),
+			maxMenuHeight,
+		);
 		const maxLeft = Math.max(12, activeWindow.innerWidth - menuWidth - 12);
-		const maxTop = Math.max(16, activeWindow.innerHeight - 420);
+		const maxTop = Math.max(margin, viewportHeight - menuHeight - margin);
 		const left =
 			rect.right + 12 + menuWidth < activeWindow.innerWidth
 				? rect.right + 12
 				: rect.left - menuWidth - 12;
 		this.menuEl.style.left = `${clamp(left, 12, maxLeft)}px`;
-		this.menuEl.style.top = `${clamp(rect.top - 30, 16, maxTop)}px`;
+		this.menuEl.style.top = `${clamp(openBelow ? rect.bottom + 8 : rect.top - menuHeight - 8, margin, maxTop)}px`;
+		this.menuEl.style.maxHeight = `${menuHeight}px`;
 
 		const header = this.menuEl.createDiv({ cls: 'pokemon-pet-menu-header' });
 		header.createEl('img', {
@@ -688,24 +700,34 @@ export class PokemonPetController {
 	}
 
 	private createCollection(container: HTMLElement): void {
-		const field = container.createDiv({ cls: 'pokemon-pet-field' });
+		const field = container.createDiv({ cls: 'pokemon-pet-field pokemon-pet-collection-field' });
 		field.createEl('label', { text: 'Collection' });
 		const grid = field.createDiv({ cls: 'pokemon-pet-collection' });
 
-		for (const pokemonId of this.plugin.settings.collection) {
+		for (const pokemon of FALLBACK_POKEMON) {
+			const pokemonId = pokemon.id;
+			const isUnlocked = this.plugin.settings.collection.includes(pokemonId);
 			const isActive = pokemonId === this.plugin.settings.activePokemonId;
 			const button = grid.createEl('button', {
-				cls: `pokemon-pet-collection-item${isActive ? ' is-active' : ''}`,
-				attr: { type: 'button' },
-			});
-			button.createEl('img', {
+				cls: `pokemon-pet-collection-item${isActive ? ' is-active' : ''}${isUnlocked ? '' : ' is-locked'}`,
 				attr: {
-					src: makeStaticSpriteUrl(pokemonId),
-					alt: getPokemonName(pokemonId),
+					type: 'button',
+					'aria-label': isUnlocked ? `Select ${pokemon.name}` : 'Locked pokemon',
 				},
 			});
-			button.createSpan({ text: getPokemonName(pokemonId) });
+			button.createEl('img', {
+				cls: isUnlocked ? '' : 'pokemon-pet-locked-sprite',
+				attr: {
+					src: makeStaticSpriteUrl(pokemon.name),
+					alt: isUnlocked ? pokemon.name : 'Locked',
+				},
+			});
+			button.createSpan({ text: isUnlocked ? getPokemonName(pokemonId) : '???' });
+			button.disabled = !isUnlocked;
 			button.addEventListener('click', () => {
+				if (!isUnlocked) {
+					return;
+				}
 				void (async () => {
 					this.plugin.settings.activePokemonId = pokemonId;
 					await this.plugin.saveSettings();
